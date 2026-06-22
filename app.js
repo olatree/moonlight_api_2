@@ -112,6 +112,7 @@ app.use("/api/fees/structures", feeStructureRoutes);
 app.use("/api/fees/accounts", feeAccountRoutes);
 app.use("/api/fees/payments", paymentRoutes);
 app.use("/api/fees/discounts", discountRoutes);
+// app.use("/api/fees/discounts", discountRoutes);
 app.use("/api/fees/reports", feeReportRoutes);
 
 app.use(notFound);
