@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { promoteOrRepeatStudents } = require("../controllers/promotionController");
+const { promoteOrRepeatStudents } = require("../controllers/PromotionController");
 const { protect, restrictToRoles } = require("../middleware/authMiddleware");
 
 router.post(
