@@ -45,15 +45,24 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(helmet());
 app.use(compression());
 
+// app.use(
+//   cors({
+//     origin(origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//         return callback(null, true);
+//       } 
+      
+//       return callback(new Error("Not allowed by CORS"));
+//     },
+//     credentials: true,
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//   })
+// );
+
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } 
-      
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: "moonlightcollege.com.ng",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
