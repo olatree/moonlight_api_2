@@ -18,14 +18,14 @@ const isProduction = process.env.NODE_ENV === "production";
 const studentCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: "None",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 const clearStudentCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? "none" : "lax",
+  sameSite: "None",
 };
 
 const sanitizeStudent = (student) => ({
