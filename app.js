@@ -31,7 +31,6 @@ const paymentRoutes = require("./src/routes/fees/paymentRoutes");
 const discountRoutes = require("./src/routes/fees/discountRoutes");
 const feeReportRoutes = require("./src/routes/fees/feeReportRoutes");
 
-console.log("Allowed origins:", allowedOrigins);
 
 // const notFound = require("./src/middleware/notFound");
 const {notFound, errorHandler} = require("./src/middleware/errorHandler");
@@ -41,6 +40,7 @@ const app = express();
 const allowedOrigins = process.env.FRONTEND_URL
 ? process.env.FRONTEND_URL.split(",").map((url) => url.trim())
 : [];
+console.log("Allowed origins:", allowedOrigins);
 
 app.use(helmet());
 app.use(compression());
