@@ -30,6 +30,7 @@ const feeAccountRoutes = require("./src/routes/fees/feeAccountRoutes");
 const paymentRoutes = require("./src/routes/fees/paymentRoutes");
 const discountRoutes = require("./src/routes/fees/discountRoutes");
 const feeReportRoutes = require("./src/routes/fees/feeReportRoutes");
+const lessonRoutes = require("./src/routes/lessonRoutes");
 
 
 // const notFound = require("./src/middleware/notFound");
@@ -124,6 +125,9 @@ app.use("/api/fees/discounts", discountRoutes);
 // app.use("/api/fees/discounts", discountRoutes);
 app.use("/api/fees/reports", feeReportRoutes);
 app.use("/api/student-fees", require("./src/routes/fees/studentFeeRoutes"));
+
+app.use("/api/student-fees", require("./src/routes/fees/studentFeeRoutes"));
+app.use("/api/lessons", lessonRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
