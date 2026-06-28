@@ -45,7 +45,17 @@ const feeAccountSchema = new mongoose.Schema(
       required: true,
     },
 
+    billingCategory: {
+      type: String,
+      enum: ["returning", "new_intake", "transfer"],
+      default: "returning",
+    },
+
     previousBalance: {
+      type: Number,
+      default: 0,
+    },
+    previousBalancePaid: {
       type: Number,
       default: 0,
     },
@@ -155,7 +165,16 @@ feeAccountSchema.methods.recalculate = function () {
 
   this.netPayable = currentTermNetAmount + Number(this.previousBalance || 0);
 
-  this.totalPaid = this.fees.reduce((sum, fee) => sum + Number(fee.paid || 0), 0);
+  // this.totalPaid = this.fees.reduce((sum, fee) => sum + Number(fee.paid || 0), 0);
+
+  // this.totalDue = this.netPayable - this.totalPaid;
+
+  const currentTermPaid = this.fees.reduce(
+    (sum, fee) => sum + Number(fee.paid || 0),
+    0
+  );
+
+  this.totalPaid = currentTermPaid + Number(this.previousBalancePaid || 0);
 
   this.totalDue = this.netPayable - this.totalPaid;
 

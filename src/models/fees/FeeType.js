@@ -21,6 +21,12 @@ const feeTypeSchema = new mongoose.Schema(
       default: true,
     },
 
+    appliesTo: {
+      type: String,
+      enum: ["all", "returning", "new_intake", "transfer"],
+      default: "all",
+    },
+
     isActive: {
       type: Boolean,
       default: true,

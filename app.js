@@ -123,6 +123,7 @@ app.use("/api/fees/payments", paymentRoutes);
 app.use("/api/fees/discounts", discountRoutes);
 // app.use("/api/fees/discounts", discountRoutes);
 app.use("/api/fees/reports", feeReportRoutes);
+app.use("/api/student-fees", require("./src/routes/fees/studentFeeRoutes"));
 
 app.use(notFound);
 app.use(errorHandler);

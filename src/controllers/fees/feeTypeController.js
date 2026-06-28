@@ -8,7 +8,7 @@ const FeeType = require("../../models/fees/FeeType");
 // =========================
 exports.createFeeType = async (req, res) => {
   try {
-    const { name, description, isCompulsory } = req.body;
+    const { name, description, isCompulsory, appliesTo } = req.body;
 
     const existing = await FeeType.findOne({
       name: name.trim(),
@@ -25,6 +25,7 @@ exports.createFeeType = async (req, res) => {
       name: name.trim(),
       description,
       isCompulsory,
+      appliesTo: appliesTo || "all",
     });
 
     res.status(201).json({
@@ -110,6 +111,9 @@ exports.updateFeeType = async (req, res) => {
 
     feeType.isCompulsory =
       req.body.isCompulsory ?? feeType.isCompulsory;
+
+    feeType.appliesTo =
+      req.body.appliesTo ?? feeType.appliesTo;
 
     await feeType.save();
 

@@ -56,6 +56,16 @@ const paymentSchema = new mongoose.Schema(
       default: "",
     },
 
+    previousBalancePaid: {
+      type: Number,
+      default: 0,
+    },
+
+    currentTermPaid: {
+      type: Number,
+      default: 0,
+    },
+
     receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

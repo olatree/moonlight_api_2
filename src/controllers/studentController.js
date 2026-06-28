@@ -114,6 +114,7 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     armId,
     sessionId,
     termId,
+    studentCategory,
   } = req.body;
 
   if (
@@ -157,6 +158,7 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     classId,
     armId,
     sessionId,
+    studentCategory: studentCategory || "returning",
   };
 
   if (termId) {
@@ -344,6 +346,9 @@ exports.updateStudent = asyncHandler(async (req, res) => {
   if (req.body.armId) enrollmentUpdates.armId = req.body.armId;
   if (req.body.sessionId) enrollmentUpdates.sessionId = req.body.sessionId;
   if (req.body.termId) enrollmentUpdates.termId = req.body.termId;
+  if (req.body.studentCategory) {
+        enrollmentUpdates.studentCategory = req.body.studentCategory;
+      }
 
   if (Object.keys(enrollmentUpdates).length > 0) {
     await Enrollment.findOneAndUpdate(
@@ -459,5 +464,24 @@ exports.logoutStudent = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Logged out successfully",
+  });
+});
+
+// studentController.js
+exports.getStudentProfile = asyncHandler(async (req, res) => {
+  const enrollment = await Enrollment.findOne({
+    studentId: req.student._id,
+  })
+    .populate("classId", "name")
+    .populate("armId", "name")
+    .populate("sessionId", "name")
+    .sort({ createdAt: -1 });
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      student: sanitizeStudent(req.student),
+      enrollment,
+    },
   });
 });

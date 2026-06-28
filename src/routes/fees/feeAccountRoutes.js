@@ -9,6 +9,7 @@ const {
   getFeeAccount,
   getStudentFeeAccount,
   getStudentReportFeeInfo,
+  generateSingleStudentFeeAccount,
 } = require("../../controllers/fees/feeAccountController");
 
 const {
@@ -39,5 +40,7 @@ router.post(
   restrictToRoles(...ADMIN_ROLES),
   generateFeeAccounts
 );
+
+router.post("/generate-single", protect, restrictToRoles(...ADMIN_ROLES), generateSingleStudentFeeAccount);
 
 module.exports = router;
