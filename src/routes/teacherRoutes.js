@@ -1,25 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const { protect, restrictToRoles } = require("../middleware/authMiddleware");
-// const {
-//     createTeacher,
-//     getTeachers,
-//     getTeacherById,
-//     updateTeacher,
-//     deleteTeacher
-// } = require("../controllers/teacherController");
-
-// router.use(protect);
-// router.use(restrictToRoles("admin", "super_admin"));
-
-// // CRUD
-// router.post("/", createTeacher);
-// router.get("/", getTeachers);
-// router.get("/:id", getTeacherById);
-// router.put("/:id", updateTeacher);
-// router.delete("/:id", deleteTeacher);
-
-// module.exports = router;
 
 
 // server/routes/teacherRoutes.js
