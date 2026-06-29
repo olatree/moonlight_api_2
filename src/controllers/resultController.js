@@ -2,6 +2,8 @@
 const Result = require("../models/Result");
 const Enrollment = require("../models/Enrollment");
 const TermReport = require ("../models/TermReport");
+const ResultPublication = require("../models/ResultPublication");
+const Term = require("../models/Term");
 
 // // ----------------------------
 // ----------------------------
@@ -167,46 +169,152 @@ exports.getAllClassResults = async (req, res) => {
 
 
 
+// // ----------------------------
+// // Get Student Term Results
+// // ----------------------------
+// exports.getStudentTermResults = async (req, res) => {
+//   const { enrollmentId: queryEnrollmentId, userId, sessionId, termId } = req.query;
+//   // console.log("📥 Incoming Query:", { userId, sessionId, termId });
+
+//   try {
+//     if (!sessionId || !termId) {
+//       return res.status(400).json({ message: "Session and Term are required." });
+//     }    
+
+//     let enrollmentId = queryEnrollmentId;
+
+//     // 🔹 If no enrollmentId provided, get it from logged-in student
+//     if (!enrollmentId) {
+//       const studentId = userId; // assumes your auth middleware attaches user
+//       // console.log("👨‍🎓 Logged-in Student ID:", studentId);
+//       if (!studentId) {
+//         return res.status(401).json({ message: "Unauthorized. No student information found." });
+//       } 
+
+//       // find enrollment for this student in the selected session
+//       const enrollment = await Enrollment.findOne({ studentId, sessionId }).select("_id");
+//       // console.log("🔍 Found Enrollment:", enrollment);
+//       if (!enrollment) {
+//         return res.status(404).json({ message: "Enrollment not found for this student in the selected session." });
+//       }
+//       enrollmentId = enrollment._id;
+//       // console.log("🔍 Resolved Enrollment ID:", enrollmentId); // works to this point
+//     }
+
+//     // 🔹 Use your schema's built-in static method
+//     const { termResults, termAverage } = await Result.computeTermly(enrollmentId, sessionId, termId);
+
+//     if (!termResults || termResults.length === 0) {
+//       return res.status(404).json({ message: "No results found for this term." });
+//     } 
+
+//     const report = await TermReport.findOne({ enrollmentId, termId, sessionId });
+
+//     res.status(200).json({
+//       success: true,
+//       results: termResults,
+//       termAverage,
+//       comments: {
+//         classTeacher: report?.classTeacherComment || "",
+//         principal: report?.principalComment || "",
+//       },
+//     });
+
+//   } catch (error) {
+//     console.error("Error fetching student term results:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "An error occurred while fetching results.",
+//       error: error.message,
+//     });
+//   }
+// };
+
 // ----------------------------
 // Get Student Term Results
 // ----------------------------
 exports.getStudentTermResults = async (req, res) => {
   const { enrollmentId: queryEnrollmentId, userId, sessionId, termId } = req.query;
-  // console.log("📥 Incoming Query:", { userId, sessionId, termId });
 
   try {
     if (!sessionId || !termId) {
-      return res.status(400).json({ message: "Session and Term are required." });
-    }    
+      return res.status(400).json({
+        success: false,
+        message: "Session and Term are required.",
+      });
+    }
+
+    // Block restricted students from viewing results
+    if (
+      req.student?.blocked ||
+      req.student?.archived ||
+      req.student?.status === "graduated"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to view results. Contact the school.",
+      });
+    }
+
+    // Check if result has been published
+    const publication = await ResultPublication.findOne({
+      sessionId,
+      termId,
+      isPublished: true,
+    });
+
+    if (!publication) {
+      return res.status(403).json({
+        success: false,
+        message: "This term's result has not been published yet.",
+      });
+    }
 
     let enrollmentId = queryEnrollmentId;
 
-    // 🔹 If no enrollmentId provided, get it from logged-in student
     if (!enrollmentId) {
-      const studentId = userId; // assumes your auth middleware attaches user
-      // console.log("👨‍🎓 Logged-in Student ID:", studentId);
-      if (!studentId) {
-        return res.status(401).json({ message: "Unauthorized. No student information found." });
-      } 
+      const studentId = req.student?._id || userId;
 
-      // find enrollment for this student in the selected session
-      const enrollment = await Enrollment.findOne({ studentId, sessionId }).select("_id");
-      // console.log("🔍 Found Enrollment:", enrollment);
-      if (!enrollment) {
-        return res.status(404).json({ message: "Enrollment not found for this student in the selected session." });
+      if (!studentId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized. No student information found.",
+        });
       }
+
+      const enrollment = await Enrollment.findOne({
+        studentId,
+        sessionId,
+      }).select("_id");
+
+      if (!enrollment) {
+        return res.status(404).json({
+          success: false,
+          message: "Enrollment not found for this student in the selected session.",
+        });
+      }
+
       enrollmentId = enrollment._id;
-      // console.log("🔍 Resolved Enrollment ID:", enrollmentId); // works to this point
     }
 
-    // 🔹 Use your schema's built-in static method
-    const { termResults, termAverage } = await Result.computeTermly(enrollmentId, sessionId, termId);
+    const { termResults, termAverage } = await Result.computeTermly(
+      enrollmentId,
+      sessionId,
+      termId
+    );
 
     if (!termResults || termResults.length === 0) {
-      return res.status(404).json({ message: "No results found for this term." });
-    } 
+      return res.status(404).json({
+        success: false,
+        message: "No results found for this term.",
+      });
+    }
 
-    const report = await TermReport.findOne({ enrollmentId, termId, sessionId });
+    const report = await TermReport.findOne({
+      enrollmentId,
+      termId,
+      sessionId,
+    });
 
     res.status(200).json({
       success: true,
@@ -217,9 +325,9 @@ exports.getStudentTermResults = async (req, res) => {
         principal: report?.principalComment || "",
       },
     });
-
   } catch (error) {
     console.error("Error fetching student term results:", error);
+
     res.status(500).json({
       success: false,
       message: "An error occurred while fetching results.",
@@ -240,6 +348,85 @@ exports.getStudentYearlyResults = async (req, res) => {
   } catch (error) {
     console.error("getStudentYearlyResults error:", error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// ----------------------------
+// Get Student Yearly Results
+// ----------------------------
+exports.getStudentYearlyResults = async (req, res) => {
+  const { enrollmentId, sessionId } = req.query;
+
+  try {
+    if (!enrollmentId || !sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Enrollment and Session are required.",
+      });
+    }
+
+    // Student restrictions
+    if (
+      req.student?.blocked ||
+      req.student?.archived ||
+      req.student?.status === "graduated"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to view results. Contact the school.",
+      });
+    }
+
+    // Get all terms for the session
+    const terms = await Term.find({ sessionId }).select("_id name");
+
+    if (terms.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No terms found for this session.",
+      });
+    }
+
+    // Check publication status
+    const publications = await ResultPublication.find({
+      sessionId,
+      isPublished: true,
+    }).select("termId");
+
+    const publishedTermIds = publications.map((p) =>
+      p.termId.toString()
+    );
+
+    const unpublishedTerms = terms.filter(
+      (term) => !publishedTermIds.includes(term._id.toString())
+    );
+
+    if (unpublishedTerms.length > 0) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Yearly results are not yet available because not all terms have been published.",
+        unpublishedTerms: unpublishedTerms.map((t) => t.name),
+      });
+    }
+
+    // All terms published
+    const yearlyResult = await Result.computeYearly(
+      enrollmentId,
+      sessionId
+    );
+
+    res.status(200).json({
+      success: true,
+      data: yearlyResult,
+    });
+  } catch (error) {
+    console.error("Get yearly results error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

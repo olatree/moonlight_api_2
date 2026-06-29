@@ -128,6 +128,25 @@ const sanitizeUser = (user) => ({
 
 });
 
+// const createSessionAndSetCookies = async (req, res, user) => {
+//   const accessToken = signAccessToken(user);
+//   const refreshToken = generateRefreshToken();
+//   const refreshTokenHash = await hashRefreshToken(refreshToken);
+
+//   const expiresAt = new Date();
+//   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
+
+//   await AuthSession.create({
+//     user: user._id,
+//     refreshTokenHash,
+//     userAgent: req.get("user-agent"),
+//     ipAddress: req.ip,
+//     expiresAt,
+//   });
+
+//   setAuthCookies(res, accessToken, refreshToken);
+// };
+
 const createSessionAndSetCookies = async (req, res, user) => {
   const accessToken = signAccessToken(user);
   const refreshToken = generateRefreshToken();
@@ -145,6 +164,8 @@ const createSessionAndSetCookies = async (req, res, user) => {
   });
 
   setAuthCookies(res, accessToken, refreshToken);
+
+  return accessToken; // add this
 };
 
 exports.register = asyncHandler(async (req, res) => {
@@ -195,6 +216,50 @@ exports.register = asyncHandler(async (req, res) => {
   });
 });
 
+// exports.login = asyncHandler(async (req, res) => {
+//   const { userId, password } = req.body;
+
+//   if (!userId || !password) {
+//     res.status(StatusCodes.BAD_REQUEST);
+//     throw new Error("User ID and password are required");
+//   }
+
+//   const user = await User.findOne({ userId }).select("+password");
+
+//   if (!user) {
+//     res.status(StatusCodes.UNAUTHORIZED);
+//     throw new Error("Invalid ID or password");
+//   }
+
+//   if (user.isBlocked) {
+//     res.status(StatusCodes.FORBIDDEN);
+//     throw new Error("Your account has been blocked. Contact admin.");
+//   }
+
+//   const isMatch = await user.matchPassword(password);
+
+//   if (!isMatch) {
+//     res.status(StatusCodes.UNAUTHORIZED);
+//     throw new Error("Invalid ID or password");
+//   }
+
+//   await createSessionAndSetCookies(req, res, user);
+
+//   await auditLog({
+//     req,
+//     actor: user._id,
+//     action: "AUTH_LOGIN",
+//     entity: "User",
+//     entityId: user._id,
+//   });
+
+//   res.status(StatusCodes.OK).json({
+//     success: true,
+//     message: "Login successful",
+//     data: sanitizeUser(user),
+//   });
+// });
+
 exports.login = asyncHandler(async (req, res) => {
   const { userId, password } = req.body;
 
@@ -222,7 +287,7 @@ exports.login = asyncHandler(async (req, res) => {
     throw new Error("Invalid ID or password");
   }
 
-  await createSessionAndSetCookies(req, res, user);
+  const accessToken = await createSessionAndSetCookies(req, res, user);
 
   await auditLog({
     req,
@@ -235,6 +300,7 @@ exports.login = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Login successful",
+    token: accessToken,
     data: sanitizeUser(user),
   });
 });

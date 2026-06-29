@@ -80,6 +80,7 @@ router.post(
   protect,
   restrictToRoles(
     "teacher",
+    "principal",
     "class_teacher",
     "admin",
     "super_admin",

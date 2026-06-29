@@ -25,7 +25,9 @@
 //     students.length === 0
 //   ) {
 //     res.status(StatusCodes.BAD_REQUEST);
-//     throw new Error("fromSessionId, toSessionId, fromClassId, fromArmId, and students are required.");
+//     throw new Error(
+//       "fromSessionId, toSessionId, fromClassId, fromArmId, and students are required."
+//     );
 //   }
 
 //   if (fromSessionId === toSessionId) {
@@ -93,7 +95,13 @@
 //       classId: toClassId,
 //       armId: toArmId,
 //       sessionId: toSessionId,
+
+//       // Very important for fee management:
+//       // A promoted/repeated student is no longer a new intake.
+//       studentCategory: "returning",
+
 //       isRepeating: action === "repeat",
+//       previousEnrollmentId: oldEnrollment._id,
 //     });
 
 //     const responseItem = {
@@ -105,6 +113,8 @@
 //       toClassId,
 //       toArmId,
 //       toSessionId,
+//       studentCategory: newEnrollment.studentCategory,
+//       isRepeating: newEnrollment.isRepeating,
 //     };
 
 //     if (action === "repeat") {
@@ -132,23 +142,18 @@
 const { StatusCodes } = require("http-status-codes");
 const mongoose = require("mongoose");
 
+const Student = require("../models/Student");
 const Enrollment = require("../models/Enrollment");
 const asyncHandler = require("../middleware/asyncHandler");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
-  const {
-    fromSessionId,
-    toSessionId,
-    fromClassId,
-    fromArmId,
-    students,
-  } = req.body;
+  const { fromSessionId, toSessionId, fromClassId, fromArmId, students } =
+    req.body;
 
   if (
     !fromSessionId ||
-    !toSessionId ||
     !fromClassId ||
     !fromArmId ||
     !Array.isArray(students) ||
@@ -156,19 +161,20 @@ exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
   ) {
     res.status(StatusCodes.BAD_REQUEST);
     throw new Error(
-      "fromSessionId, toSessionId, fromClassId, fromArmId, and students are required."
+      "fromSessionId, fromClassId, fromArmId, and students are required."
     );
   }
 
-  if (fromSessionId === toSessionId) {
-    res.status(StatusCodes.BAD_REQUEST);
-    throw new Error("Target session must be different from current session.");
-  }
+  const idsToValidate = [fromSessionId, fromClassId, fromArmId];
 
-  const idsToValidate = [fromSessionId, toSessionId, fromClassId, fromArmId];
+  if (toSessionId) idsToValidate.push(toSessionId);
 
   for (const item of students) {
-    idsToValidate.push(item.studentId, item.toClassId, item.toArmId);
+    idsToValidate.push(item.studentId);
+
+    if (item.action !== "graduate") {
+      idsToValidate.push(item.toClassId, item.toArmId);
+    }
   }
 
   if (!idsToValidate.every(isValidObjectId)) {
@@ -178,15 +184,32 @@ exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
 
   const promoted = [];
   const repeated = [];
+  const graduated = [];
   const skipped = [];
 
   for (const item of students) {
     const { studentId, toClassId, toArmId, action } = item;
 
-    if (!["promote", "repeat"].includes(action)) {
+    if (!["promote", "repeat", "graduate"].includes(action)) {
       skipped.push({
         studentId,
-        reason: "Invalid action. Use promote or repeat.",
+        reason: "Invalid action. Use promote, repeat, or graduate.",
+      });
+      continue;
+    }
+
+    if (action !== "graduate" && !toSessionId) {
+      skipped.push({
+        studentId,
+        reason: "Target session is required for promote/repeat.",
+      });
+      continue;
+    }
+
+    if (action !== "graduate" && fromSessionId === toSessionId) {
+      skipped.push({
+        studentId,
+        reason: "Target session must be different from current session.",
       });
       continue;
     }
@@ -202,6 +225,37 @@ exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
       skipped.push({
         studentId,
         reason: "Student is not enrolled in the source class/session.",
+      });
+      continue;
+    }
+
+    if (action === "graduate") {
+      await Student.findByIdAndUpdate(
+        studentId,
+        {
+          status: "graduated",
+          graduatedAt: new Date(),
+          graduatedSessionId: fromSessionId,
+        },
+        { runValidators: true }
+      );
+
+      graduated.push({
+        studentId,
+        name: oldEnrollment.studentId?.name,
+        admissionNumber: oldEnrollment.studentId?.admissionNumber,
+        fromEnrollmentId: oldEnrollment._id,
+        graduatedSessionId: fromSessionId,
+      });
+
+      continue;
+    }
+
+    if (!toClassId || !toArmId) {
+      skipped.push({
+        studentId,
+        name: oldEnrollment.studentId?.name,
+        reason: "Target class and arm are required.",
       });
       continue;
     }
@@ -225,11 +279,7 @@ exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
       classId: toClassId,
       armId: toArmId,
       sessionId: toSessionId,
-
-      // Very important for fee management:
-      // A promoted/repeated student is no longer a new intake.
       studentCategory: "returning",
-
       isRepeating: action === "repeat",
       previousEnrollmentId: oldEnrollment._id,
     });
@@ -260,9 +310,11 @@ exports.promoteOrRepeatStudents = asyncHandler(async (req, res) => {
     data: {
       promotedCount: promoted.length,
       repeatedCount: repeated.length,
+      graduatedCount: graduated.length,
       skippedCount: skipped.length,
       promoted,
       repeated,
+      graduated,
       skipped,
     },
   });

@@ -28,6 +28,20 @@ const clearStudentCookieOptions = {
   sameSite: "None",
 };
 
+// const sanitizeStudent = (student) => ({
+//   id: student._id,
+//   name: student.name,
+//   admissionNumber: student.admissionNumber,
+//   image: student.image,
+//   gender: student.gender,
+//   dateOfBirth: student.dateOfBirth,
+//   parentContact: student.parentContact,
+//   blocked: student.blocked,
+//   archived: student.archived,
+//   createdAt: student.createdAt,
+//   updatedAt: student.updatedAt,
+// });
+
 const sanitizeStudent = (student) => ({
   id: student._id,
   name: student.name,
@@ -38,6 +52,9 @@ const sanitizeStudent = (student) => ({
   parentContact: student.parentContact,
   blocked: student.blocked,
   archived: student.archived,
+  status: student.status,
+  graduatedAt: student.graduatedAt,
+  graduatedSessionId: student.graduatedSessionId,
   createdAt: student.createdAt,
   updatedAt: student.updatedAt,
 });
@@ -181,31 +198,148 @@ exports.registerStudent = asyncHandler(async (req, res) => {
   });
 });
 
+
+// // Get Students
+// exports.getStudents = asyncHandler(async (req, res) => {
+//   const {
+//     sessionId,
+//     classId,
+//     armId,
+//     studentId,
+//     includeGraduated,
+//   } = req.query;
+
+//   const filter = {};
+
+//   if (sessionId) filter.sessionId = sessionId;
+//   if (classId) filter.classId = classId;
+//   if (armId) filter.armId = armId;
+//   if (studentId) filter.studentId = studentId;
+
+//   const studentMatch = {
+//     archived: false,
+//   };
+
+//   if (includeGraduated !== "true") {
+//     studentMatch.status = { $ne: "graduated" };
+//   }
+
+//   const enrollments = await Enrollment.find(filter)
+//     .populate({
+//       path: "studentId",
+//       match: studentMatch,
+//       select:
+//         "name image admissionNumber dateOfBirth gender parentContact blocked archived status graduatedAt graduatedSessionId",
+//     })
+//     .populate("classId", "name")
+//     .populate("armId", "name")
+//     .populate("sessionId", "name")
+//     .lean();
+
+//   const filteredEnrollments = enrollments.filter(
+//     (enrollment) => enrollment.studentId
+//   );
+
+//   res.status(StatusCodes.OK).json({
+//     success: true,
+//     count: filteredEnrollments.length,
+//     data: filteredEnrollments,
+//   });
+// });
+
+// exports.getStudents = asyncHandler(async (req, res) => {
+//   const { sessionId, classId, armId, studentId, studentStatus } = req.query;
+
+//   const filter = {};
+
+//   if (sessionId) filter.sessionId = sessionId;
+//   if (classId) filter.classId = classId;
+//   if (armId) filter.armId = armId;
+//   if (studentId) filter.studentId = studentId;
+
+//   const studentMatch = {};
+
+//   if (studentStatus === "graduated") {
+//     studentMatch.status = "graduated";
+//     studentMatch.archived = false;
+//   } else if (studentStatus === "archived") {
+//     studentMatch.archived = true;
+//   } else {
+//     studentMatch.archived = false;
+//     studentMatch.status = { $ne: "graduated" };
+//   }
+
+//   const enrollments = await Enrollment.find(filter)
+//     .populate({
+//       path: "studentId",
+//       match: studentMatch,
+//       select:
+//         "name image admissionNumber dateOfBirth gender parentContact blocked archived status graduatedAt graduatedSessionId",
+//     })
+//     .populate("classId", "name")
+//     .populate("armId", "name")
+//     .populate("sessionId", "name")
+//     .lean();
+
+//   const filteredEnrollments = enrollments.filter((en) => en.studentId);
+
+//   res.status(StatusCodes.OK).json({
+//     success: true,
+//     count: filteredEnrollments.length,
+//     data: filteredEnrollments,
+//   });
+// });
+
 // Get Students
 exports.getStudents = asyncHandler(async (req, res) => {
-  const { sessionId, classId, armId, studentId } = req.query;
+  const {
+    sessionId,
+    classId,
+    armId,
+    studentId,
+    studentStatus = "active",
+  } = req.query;
 
-  const filter = {};
+  const enrollmentFilter = {};
 
-  if (sessionId) filter.sessionId = sessionId;
-  if (classId) filter.classId = classId;
-  if (armId) filter.armId = armId;
-  if (studentId) filter.studentId = studentId;
+  if (sessionId) enrollmentFilter.sessionId = sessionId;
+  if (classId) enrollmentFilter.classId = classId;
+  if (armId) enrollmentFilter.armId = armId;
+  if (studentId) enrollmentFilter.studentId = studentId;
 
-  const enrollments = await Enrollment.find(filter)
-    .populate(
-      "studentId",
-      "name image admissionNumber dateOfBirth gender parentContact blocked archived"
-    )
+  const studentMatch = {};
+
+  if (studentStatus === "graduated") {
+    studentMatch.status = "graduated";
+    studentMatch.archived = { $ne: true };
+  } else if (studentStatus === "archived") {
+    studentMatch.archived = true;
+  } else {
+    studentMatch.archived = { $ne: true };
+    studentMatch.status = { $ne: "graduated" };
+  }
+
+  const enrollments = await Enrollment.find(enrollmentFilter)
+    .populate({
+      path: "studentId",
+      match: studentMatch,
+      select:
+        "name image admissionNumber dateOfBirth gender parentContact blocked archived status graduatedAt graduatedSessionId",
+    })
     .populate("classId", "name")
     .populate("armId", "name")
     .populate("sessionId", "name")
+    .sort({ createdAt: -1 })
     .lean();
+
+  const filteredEnrollments = enrollments.filter(
+    (enrollment) => enrollment.studentId
+  );
 
   res.status(StatusCodes.OK).json({
     success: true,
-    count: enrollments.length,
-    data: enrollments,
+    count: filteredEnrollments.length,
+    data: filteredEnrollments,
   });
 });
 

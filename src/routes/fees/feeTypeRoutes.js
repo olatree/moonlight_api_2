@@ -37,7 +37,6 @@ router.post(
     "admin",
     "super_admin",
     "master_admin",
-    "principal"
   ),
   createFeeType
 );

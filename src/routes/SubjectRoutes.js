@@ -17,7 +17,7 @@ const router = express.Router();
 
 
 // Subject CRUD
-router.post("/", protect, restrictToRoles("super_admin", "master_admin"), createSubject);
+router.post("/", protect, restrictToRoles("super_admin", "master_admin", "principal", "admin"), createSubject);
 router.get("/", getSubjects);
 // Get classes offering a subject
 router.get("/:subjectId/classes", getClassesForSubject);

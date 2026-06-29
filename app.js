@@ -128,6 +128,7 @@ app.use("/api/student-fees", require("./src/routes/fees/studentFeeRoutes"));
 
 app.use("/api/student-fees", require("./src/routes/fees/studentFeeRoutes"));
 app.use("/api/lessons", lessonRoutes);
+app.use("/api/result-publications", require("./src/routes/resultPublicationRoutes"));
 
 app.use(notFound);
 app.use(errorHandler);

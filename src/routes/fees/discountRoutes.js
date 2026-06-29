@@ -18,7 +18,6 @@ const ADMIN_ROLES = [
   "admin",
   "super_admin",
   "master_admin",
-  "principal",
 ];
 
 router.get("/", protect, getDiscounts);
