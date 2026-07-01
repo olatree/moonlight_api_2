@@ -6,44 +6,6 @@ const Enrollment = require("../../models/Enrollment");
 const Session = require("../../models/Session");
 const Term = require("../../models/Term");
 
-// POST /api/cbt/exams — create exam
-// exports.createExam = async (req, res) => {
-//   try {
-//     const {
-//       title, subject, classId, armId, sessionId,
-//       questionIds, duration, startTime, endTime,
-//       passMark, instructions, shuffleQuestions,
-//       shuffleOptions, showResultAfter,
-//     } = req.body;
-
-//     // Validate all question IDs actually exist
-//     const questions = await Question.find({ _id: { $in: questionIds } });
-//     if (questions.length !== questionIds.length) {
-//       return res.status(400).json({ message: "One or more question IDs are invalid" });
-//     }
-
-//     const exam = await Exam.create({
-//       title, subject, classId,
-//       armId: armId || null,
-//       sessionId,
-//       createdBy: req.user._id,
-//       questions: questionIds,
-//       duration,
-//       startTime,
-//       endTime,
-//       passMark: passMark ?? 50,
-//       instructions: instructions || "",
-//       shuffleQuestions: shuffleQuestions ?? true,
-//       shuffleOptions: shuffleOptions ?? false,
-//       showResultAfter: showResultAfter ?? false,
-//       status: "draft",
-//     });
-
-//     res.status(201).json(exam);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 
 exports.createExam = async (req, res) => {
   try {
@@ -86,56 +48,6 @@ exports.createExam = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// GET /api/cbt/exams — list exams (scoped by role)
-// exports.getExams = async (req, res) => {
-//   try {
-//     const filter = {};
-
-//     if (req.user.role === "teacher") filter.createdBy = req.user._id;
-//     if (req.query.classId) filter.classId = req.query.classId;
-//     if (req.query.subject) filter.subject = req.query.subject;
-//     if (req.query.status) filter.status = req.query.status;
-//     if (req.query.sessionId) filter.sessionId = req.query.sessionId;
-
-//     const exams = await Exam.find(filter)
-//       .populate("subject", "name")
-//       .populate("classId", "name")
-//       .populate("armId", "name")
-//       .populate("createdBy", "name")
-//       .select("-questions") // don't send full question list in index
-//       .sort({ createdAt: -1 });
-
-//     res.json(exams);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
-// exports.getExams = async (req, res) => {
-//   try {
-//     const filter = {};
-
-//     if (req.user.role === "teacher") filter.createdBy = req.user._id;
-//     if (req.query.classId)   filter.classId   = req.query.classId;
-//     if (req.query.subject)   filter.subject   = req.query.subject;
-//     if (req.query.status)    filter.status    = req.query.status;
-//     if (req.query.sessionId) filter.sessionId = req.query.sessionId;
-//     if (req.query.termId)    filter.termId    = req.query.termId;   // ← add termId filter
-
-//     const exams = await Exam.find(filter)
-//       .populate("subject", "name")
-//       .populate("classId", "name")
-//       .populate("armId", "name")
-//       .populate("createdBy", "name")
-//       .select("-questions")
-//       .sort({ createdAt: -1 });
-
-//     res.json(exams);
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
 
 exports.getExams = async (req, res) => {
   try {
@@ -377,6 +289,248 @@ exports.getExamResults = async (req, res) => {
 //   }
 // };
 
+// exports.getAvailableExams = async (req, res) => {
+//   try {
+//     const activeSession = await Session.findOne({ isActive: true });
+
+//     if (!activeSession) {
+//       return res.status(400).json({ message: "No active session found" });
+//     }
+
+//     const activeTerm = await Term.findOne({
+//       session: activeSession._id,
+//       isActive: true,
+//     });
+
+//     if (!activeTerm) {
+//       return res.status(400).json({ message: "No active term found" });
+//     }
+
+//     const enrollment = await Enrollment.findOne({
+//       studentId: req.student._id,
+//       sessionId: activeSession._id,
+//     });
+
+//     if (!enrollment) {
+//       return res.status(404).json({
+//         message: "No enrollment found for this student in the active session",
+//       });
+//     }
+
+//     const now = new Date();
+
+//     const exams = await Exam.find({
+//       classId: enrollment.classId,
+//       sessionId: activeSession._id,
+//       termId: activeTerm._id,
+//       status: "active",
+//       startTime: { $lte: now },
+//       endTime: { $gte: now },
+//       $or: [
+//         { armId: enrollment.armId },
+//         { armId: null },
+//         { armId: { $exists: false } },
+//       ],
+//     })
+//       .populate("subject", "name")
+//       .select("title subject duration startTime endTime instructions passMark");
+
+//     const examsWithStatus = await Promise.all(
+//       exams.map(async (exam) => {
+//         const session = await ExamSession.findOne({
+//           exam: exam._id,
+//           student: req.student._id,
+//         }).select("status score percentage");
+
+//         return {
+//           ...exam.toObject(),
+//           sessionStatus: session?.status || null,
+//           score: session?.score ?? null,
+//           percentage: session?.percentage ?? null,
+//         };
+//       })
+//     );
+
+//     res.json(examsWithStatus);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+// GET /api/cbt/exams/available
+// GET /api/cbt/student/exams
+// exports.getAvailableExams = async (req, res) => {
+//   try {
+//     // 1. Get active session
+//     const activeSession = await Session.findOne({ isActive: true });
+
+//     if (!activeSession) {
+//       return res.status(400).json({ message: "No active session found" });
+//     }
+
+//     // 2. Get active term for active session
+//     const activeTerm = await Term.findOne({
+//       session: activeSession._id,
+//       isActive: true,
+//     });
+
+//     if (!activeTerm) {
+//       return res.status(400).json({ message: "No active term found" });
+//     }
+
+//     // 3. Get student's enrollment for active session
+//     const enrollment = await Enrollment.findOne({
+//       studentId: req.student._id,
+//       sessionId: activeSession._id,
+//     });
+
+//     if (!enrollment) {
+//       return res.status(404).json({
+//         message: "No enrollment found for this student in the active session",
+//       });
+//     }
+
+//     const now = new Date();
+
+//     // 4. Find exams for student's class/arm/session/term
+//     const exams = await Exam.find({
+//       classId: enrollment.classId,
+//       sessionId: activeSession._id,
+//       termId: activeTerm._id,
+//       status: "active",
+//       startTime: { $lte: now },
+//       endTime: { $gte: now },
+//       $or: [
+//         { armId: enrollment.armId },
+//         { armId: null },
+//         { armId: { $exists: false } },
+//       ],
+//     })
+//       .populate("subject", "name")
+//       .populate("classId", "name")
+//       .populate("armId", "name")
+//       .select(
+//         "title subject classId armId duration startTime endTime instructions passMark"
+//       )
+//       .sort({ startTime: 1 });
+
+//     // 5. Add student's exam session status
+//     const examsWithStatus = await Promise.all(
+//       exams.map(async (exam) => {
+//         const examSession = await ExamSession.findOne({
+//           exam: exam._id,
+//           student: req.student._id,
+//         }).select("status score percentage");
+
+//         return {
+//           ...exam.toObject(),
+//           sessionStatus: examSession?.status || null,
+//           score: examSession?.score ?? null,
+//           percentage: examSession?.percentage ?? null,
+//         };
+//       })
+//     );
+
+//     res.json(examsWithStatus);
+//   } catch (err) {
+//     console.error("Get available exams error:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// GET /api/cbt/student/exams
+// exports.getAvailableExams = async (req, res) => {
+//   try {
+//     const activeSession = await Session.findOne({ isActive: true });
+
+//     if (!activeSession) {
+//       return res.status(400).json({ message: "No active session found" });
+//     }
+
+//     const activeTerm = await Term.findOne({
+//       session: activeSession._id,
+//       isActive: true,
+//     });
+
+//     if (!activeTerm) {
+//       return res.status(400).json({ message: "No active term found" });
+//     }
+
+//     const enrollment = await Enrollment.findOne({
+//       studentId: req.student._id,
+//       sessionId: activeSession._id,
+//     });
+
+//     if (!enrollment) {
+//       return res.status(404).json({
+//         message: "No enrollment found for this student in the active session",
+//       });
+//     }
+
+//     const now = new Date();
+
+//     console.log("===== STUDENT CBT EXAM DEBUG =====");
+//     console.log("Student:", req.student._id);
+//     console.log("Active Session:", activeSession._id);
+//     console.log("Active Term:", activeTerm._id);
+//     console.log("Enrollment Class:", enrollment.classId);
+//     console.log("Enrollment Arm:", enrollment.armId);
+//     console.log("Current Time:", now);
+
+//     const allActiveExams = await Exam.find({ status: "active" })
+//       .select("title classId armId sessionId termId status startTime endTime")
+//       .lean();
+
+//     console.log("All active exams:", allActiveExams);
+
+//     const exams = await Exam.find({
+//       classId: enrollment.classId,
+//       sessionId: activeSession._id,
+//       termId: activeTerm._id,
+//       status: "active",
+//       // startTime: { $lte: now },
+//       endTime: { $gte: now },
+//       $or: [
+//         { armId: enrollment.armId },
+//         { armId: null },
+//         { armId: { $exists: false } },
+//       ],
+//     })
+//       .populate("subject", "name")
+//       .populate("classId", "name")
+//       .populate("armId", "name")
+//       .select(
+//         "title subject classId armId duration startTime endTime instructions passMark"
+//       )
+//       // .sort({ startTime: 1 });
+
+//     console.log("Matched exams:", exams.length);
+
+//     const examsWithStatus = await Promise.all(
+//       exams.map(async (exam) => {
+//         const examSession = await ExamSession.findOne({
+//           exam: exam._id,
+//           student: req.student._id,
+//         }).select("status score percentage");
+
+//         return {
+//           ...exam.toObject(),
+//           sessionStatus: examSession?.status || null,
+//           score: examSession?.score ?? null,
+//           percentage: examSession?.percentage ?? null,
+//         };
+//       })
+//     );
+
+//     res.json(examsWithStatus);
+//   } catch (err) {
+//     console.error("Get available exams error:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
 exports.getAvailableExams = async (req, res) => {
   try {
     const activeSession = await Session.findOne({ isActive: true });
@@ -407,40 +561,79 @@ exports.getAvailableExams = async (req, res) => {
 
     const now = new Date();
 
+    // Get student's submitted/timed out sessions
+    const studentSessions = await ExamSession.find({
+      student: req.student._id,
+      status: { $in: ["submitted", "timed_out"] },
+    }).select("exam");
+
+    const attemptedExamIds = studentSessions.map((s) => s.exam);
+
     const exams = await Exam.find({
       classId: enrollment.classId,
       sessionId: activeSession._id,
       termId: activeTerm._id,
-      status: "active",
-      startTime: { $lte: now },
-      endTime: { $gte: now },
       $or: [
         { armId: enrollment.armId },
         { armId: null },
         { armId: { $exists: false } },
       ],
+
+      // Show either available exams OR released attempted exams
+      $and: [
+        {
+          $or: [
+            {
+              status: "active",
+              endTime: { $gte: now },
+            },
+            {
+              _id: { $in: attemptedExamIds },
+              releaseResult: true,
+            },
+            {
+              _id: { $in: attemptedExamIds },
+              showResultAfter: true,
+            },
+          ],
+        },
+      ],
     })
       .populate("subject", "name")
-      .select("title subject duration startTime endTime instructions passMark");
+      .populate("classId", "name")
+      .populate("armId", "name")
+      .select(
+        "title subject classId armId duration startTime endTime instructions passMark status releaseResult showResultAfter"
+      )
+      .sort({ startTime: 1 });
 
     const examsWithStatus = await Promise.all(
       exams.map(async (exam) => {
-        const session = await ExamSession.findOne({
+        const examSession = await ExamSession.findOne({
           exam: exam._id,
           student: req.student._id,
-        }).select("status score percentage");
+        }).select("status score total percentage passed");
+
+        const canViewResult =
+          exam.releaseResult === true || exam.showResultAfter === true;
 
         return {
           ...exam.toObject(),
-          sessionStatus: session?.status || null,
-          score: session?.score ?? null,
-          percentage: session?.percentage ?? null,
+          sessionStatus: examSession?.status || null,
+
+          canViewResult,
+
+          score: canViewResult ? examSession?.score ?? null : null,
+          total: canViewResult ? examSession?.total ?? null : null,
+          percentage: canViewResult ? examSession?.percentage ?? null : null,
+          passed: canViewResult ? examSession?.passed ?? null : null,
         };
       })
     );
 
     res.json(examsWithStatus);
   } catch (err) {
+    console.error("Get available exams error:", err);
     res.status(500).json({ message: err.message });
   }
 };
