@@ -5,6 +5,7 @@ const cloudinary = require("cloudinary").v2;
 
 const Student = require("../models/Student");
 const Enrollment = require("../models/Enrollment");
+const Class = require("../models/Class");
 const asyncHandler = require("../middleware/asyncHandler");
 
 cloudinary.config({
@@ -309,15 +310,34 @@ exports.getStudents = asyncHandler(async (req, res) => {
 
   const studentMatch = {};
 
-  if (studentStatus === "graduated") {
+  // if (studentStatus === "graduated") {
+  //   studentMatch.status = "graduated";
+  //   studentMatch.archived = { $ne: true };
+  // } else if (studentStatus === "archived") {
+  //   studentMatch.archived = true;
+  // } else {
+  //   studentMatch.archived = { $ne: true };
+  //   studentMatch.status = { $ne: "graduated" };
+  // }
+
+  switch (studentStatus) {
+  case "graduated":
     studentMatch.status = "graduated";
     studentMatch.archived = { $ne: true };
-  } else if (studentStatus === "archived") {
+    break;
+
+  case "archived":
     studentMatch.archived = true;
-  } else {
+    break;
+
+  case "all":
+    studentMatch.archived = { $ne: true };
+    break;
+
+  default:
     studentMatch.archived = { $ne: true };
     studentMatch.status = { $ne: "graduated" };
-  }
+}
 
   const enrollments = await Enrollment.find(enrollmentFilter)
     .populate({
