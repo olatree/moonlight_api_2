@@ -10,7 +10,7 @@ const {
   editPromotionAudit,
   getPromotionBatches,
   getPromotionBatchDetail,
-} = require("../controllers/promotionController");
+} = require("../controllers/PromotionController");
 const { protect, restrictToRoles } = require("../middleware/authMiddleware");
 
 router.post(
