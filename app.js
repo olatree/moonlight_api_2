@@ -90,6 +90,16 @@ app.use(
   })
 );
 
+app.get("/api", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+  console.log("Health check endpoint hit");
+});
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
