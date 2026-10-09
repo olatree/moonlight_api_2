@@ -1,13 +1,14 @@
 // controllers/resultController.js
 const Result = require("../models/Result");
 const Enrollment = require("../models/Enrollment");
-const TermReport = require ("../models/TermReport");
+const TermReport = require("../models/TermReport");
 const ResultPublication = require("../models/ResultPublication");
 const Term = require("../models/Term");
 
 // // ----------------------------
 // ----------------------------
 // Add or Update Results (bulk entry by class)
+// New zcommit
 
 exports.addOrUpdateResults = async (req, res) => {
   const { classId, subjectId, termId, sessionId, results } = req.body;
@@ -29,10 +30,7 @@ exports.addOrUpdateResults = async (req, res) => {
 
       // Helper to check if a value is a valid number
       const isValidNumber = (val) =>
-        val !== undefined &&
-        val !== null &&
-        val !== "" &&
-        !isNaN(Number(val));
+        val !== undefined && val !== null && val !== "" && !isNaN(Number(val));
 
       if (existing) {
         // Only update fields that contain valid numbers
@@ -75,8 +73,6 @@ exports.addOrUpdateResults = async (req, res) => {
   }
 };
 
-
-
 // ----------------------------
 // Get Results for a Class (per subject, per term)
 // ----------------------------
@@ -85,10 +81,12 @@ exports.getClassResults = async (req, res) => {
 
   try {
     // 🔹 Find enrollments in the class + session
-    const enrollments = await Enrollment.find({ classId, sessionId })
-      .populate("studentId", "name admissionNumber");
+    const enrollments = await Enrollment.find({ classId, sessionId }).populate(
+      "studentId",
+      "name admissionNumber",
+    );
 
-    const enrollmentIds = enrollments.map(e => e._id);
+    const enrollmentIds = enrollments.map((e) => e._id);
 
     const results = await Result.find({
       enrollmentId: { $in: enrollmentIds },
@@ -117,14 +115,17 @@ exports.getAllClassResults = async (req, res) => {
 
   try {
     // 🔹 Find all enrollments in this class + arm + session
-    const enrollments = await Enrollment.find({ classId, armId, sessionId })
-      .populate("studentId", "name admissionNumber");
+    const enrollments = await Enrollment.find({
+      classId,
+      armId,
+      sessionId,
+    }).populate("studentId", "name admissionNumber");
 
     if (enrollments.length === 0) {
       return res.status(200).json([]);
     }
 
-    const enrollmentIds = enrollments.map(e => e._id);
+    const enrollmentIds = enrollments.map((e) => e._id);
 
     // 🔹 Fetch all results (no subject filter)
     const results = await Result.find({
@@ -167,8 +168,6 @@ exports.getAllClassResults = async (req, res) => {
   }
 };
 
-
-
 // // ----------------------------
 // // Get Student Term Results
 // // ----------------------------
@@ -179,7 +178,7 @@ exports.getAllClassResults = async (req, res) => {
 //   try {
 //     if (!sessionId || !termId) {
 //       return res.status(400).json({ message: "Session and Term are required." });
-//     }    
+//     }
 
 //     let enrollmentId = queryEnrollmentId;
 
@@ -189,7 +188,7 @@ exports.getAllClassResults = async (req, res) => {
 //       // console.log("👨‍🎓 Logged-in Student ID:", studentId);
 //       if (!studentId) {
 //         return res.status(401).json({ message: "Unauthorized. No student information found." });
-//       } 
+//       }
 
 //       // find enrollment for this student in the selected session
 //       const enrollment = await Enrollment.findOne({ studentId, sessionId }).select("_id");
@@ -206,7 +205,7 @@ exports.getAllClassResults = async (req, res) => {
 
 //     if (!termResults || termResults.length === 0) {
 //       return res.status(404).json({ message: "No results found for this term." });
-//     } 
+//     }
 
 //     const report = await TermReport.findOne({ enrollmentId, termId, sessionId });
 
@@ -234,7 +233,12 @@ exports.getAllClassResults = async (req, res) => {
 // Get Student Term Results
 // ----------------------------
 exports.getStudentTermResults = async (req, res) => {
-  const { enrollmentId: queryEnrollmentId, userId, sessionId, termId } = req.query;
+  const {
+    enrollmentId: queryEnrollmentId,
+    userId,
+    sessionId,
+    termId,
+  } = req.query;
 
   try {
     if (!sessionId || !termId) {
@@ -290,7 +294,8 @@ exports.getStudentTermResults = async (req, res) => {
       if (!enrollment) {
         return res.status(404).json({
           success: false,
-          message: "Enrollment not found for this student in the selected session.",
+          message:
+            "Enrollment not found for this student in the selected session.",
         });
       }
 
@@ -300,7 +305,7 @@ exports.getStudentTermResults = async (req, res) => {
     const { termResults, termAverage } = await Result.computeTermly(
       enrollmentId,
       sessionId,
-      termId
+      termId,
     );
 
     if (!termResults || termResults.length === 0) {
@@ -393,12 +398,10 @@ exports.getStudentYearlyResults = async (req, res) => {
       isPublished: true,
     }).select("termId");
 
-    const publishedTermIds = publications.map((p) =>
-      p.termId.toString()
-    );
+    const publishedTermIds = publications.map((p) => p.termId.toString());
 
     const unpublishedTerms = terms.filter(
-      (term) => !publishedTermIds.includes(term._id.toString())
+      (term) => !publishedTermIds.includes(term._id.toString()),
     );
 
     if (unpublishedTerms.length > 0) {
@@ -411,10 +414,7 @@ exports.getStudentYearlyResults = async (req, res) => {
     }
 
     // All terms published
-    const yearlyResult = await Result.computeYearly(
-      enrollmentId,
-      sessionId
-    );
+    const yearlyResult = await Result.computeYearly(enrollmentId, sessionId);
 
     res.status(200).json({
       success: true,
@@ -499,9 +499,7 @@ exports.getResultsBySubject = async (req, res) => {
     }).populate("studentId", "name admissionNumber");
 
     // 2️⃣ Remove orphaned enrollments
-    const validEnrollments = enrollments.filter(
-      (enroll) => enroll.studentId
-    );
+    const validEnrollments = enrollments.filter((enroll) => enroll.studentId);
 
     if (!validEnrollments.length) {
       return res.status(404).json({
@@ -523,7 +521,7 @@ exports.getResultsBySubject = async (req, res) => {
     // 4️⃣ Merge enrollments with results
     const formatted = validEnrollments.map((enroll) => {
       const existing = results.find(
-        (r) => r.enrollmentId.toString() === enroll._id.toString()
+        (r) => r.enrollmentId.toString() === enroll._id.toString(),
       );
 
       return {
@@ -554,17 +552,13 @@ exports.getResultsBySubject = async (req, res) => {
       count: formatted.length,
       data: formatted,
     });
-
   } catch (error) {
     console.error("getResultsBySubject error:", error);
 
     res.status(500).json({
       success: false,
       message: "Failed to fetch results",
-      error:
-        process.env.NODE_ENV === "production"
-          ? undefined
-          : error.message,
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
 };
@@ -624,10 +618,7 @@ exports.getResultsByStudent = async (req, res) => {
     }
 
     const enrollmentMap = new Map(
-      enrollments.map((enrollment) => [
-        enrollment._id.toString(),
-        enrollment,
-      ])
+      enrollments.map((enrollment) => [enrollment._id.toString(), enrollment]),
     );
 
     const grouped = {};
@@ -640,7 +631,8 @@ exports.getResultsByStudent = async (req, res) => {
 
       if (!grouped[key]) {
         grouped[key] = {
-          session: result.sessionId?.name || enrollment.sessionId?.name || "N/A",
+          session:
+            result.sessionId?.name || enrollment.sessionId?.name || "N/A",
           term: result.termId?.name || "N/A",
           class: enrollment.classId?.name || "N/A",
           arm: enrollment.armId?.name || "N/A",
@@ -664,7 +656,7 @@ exports.getResultsByStudent = async (req, res) => {
     const groupedResults = Object.values(grouped).map((group) => {
       const total = group.subjects.reduce(
         (sum, subject) => sum + (Number(subject.total) || 0),
-        0
+        0,
       );
 
       return {
@@ -690,8 +682,7 @@ exports.getResultsByStudent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch student results",
-      error:
-        process.env.NODE_ENV === "production" ? undefined : error.message,
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
 };
@@ -735,10 +726,7 @@ exports.getStudentProfile = async (req, res) => {
       .lean();
 
     const enrollmentMap = new Map(
-      enrollments.map((enrollment) => [
-        enrollment._id.toString(),
-        enrollment,
-      ])
+      enrollments.map((enrollment) => [enrollment._id.toString(), enrollment]),
     );
 
     const history = {};
@@ -747,12 +735,15 @@ exports.getStudentProfile = async (req, res) => {
       const enrollment = enrollmentMap.get(result.enrollmentId.toString());
       if (!enrollment) continue;
 
-      const sessionKey = result.sessionId?._id?.toString() || result.sessionId?.toString();
-      const termKey = result.termId?._id?.toString() || result.termId?.toString();
+      const sessionKey =
+        result.sessionId?._id?.toString() || result.sessionId?.toString();
+      const termKey =
+        result.termId?._id?.toString() || result.termId?.toString();
 
       if (!history[sessionKey]) {
         history[sessionKey] = {
-          session: result.sessionId?.name || enrollment.sessionId?.name || "N/A",
+          session:
+            result.sessionId?.name || enrollment.sessionId?.name || "N/A",
           class: enrollment.classId?.name || "N/A",
           arm: enrollment.armId?.name || "N/A",
           terms: {},
@@ -783,7 +774,7 @@ exports.getStudentProfile = async (req, res) => {
       const terms = Object.values(session.terms).map((term) => {
         const total = term.subjects.reduce(
           (sum, subject) => sum + (Number(subject.total) || 0),
-          0
+          0,
         );
 
         return {
@@ -813,8 +804,7 @@ exports.getStudentProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch student profile",
-      error:
-        process.env.NODE_ENV === "production" ? undefined : error.message,
+      error: process.env.NODE_ENV === "production" ? undefined : error.message,
     });
   }
 };
